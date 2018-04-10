@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线自动看视频
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      0.2
+// @version      0.1
 // @description  优课在线自动在线看视频工具
 // @author       ImDong
 // @match        *://*.uooconline.com/home
@@ -44,7 +44,7 @@
 
             // 获取课程进度
             UoocAutoLearn.getCourseLearn();
-        })
+        });
     });
 
     // 创建对象
@@ -118,7 +118,7 @@
                     '课程信息', UoocAutoLearn.parent_name,
                     '章节', UoocAutoLearn.chapter_id,
                     '部分', UoocAutoLearn.section_id,
-                    '资源', UoocAutoLearn.resource_id,
+                    '资源', UoocAutoLearn.resource_id
                 );
 
                 // 获取课程观看时间
@@ -158,7 +158,6 @@
                         break;
                     }
                 }
-
                 // 如果都看完了
                 if (isFinished) {
                     // 获取下一节课
@@ -205,7 +204,7 @@
                 video_pos: this.video_pos
             },
             success: function (response) {
-                console.log('已看至', UoocAutoLearn.video_pos, '秒');
+                console.log('已看至', UoocAutoLearn.video_pos, '秒, 总', UoocAutoLearn.video_length, '秒');
                 if (response.data.finished == 1 || UoocAutoLearn.video_pos >= UoocAutoLearn.video_length) {
                     console.log('本课已经结束');
                     // 获取下一节课
