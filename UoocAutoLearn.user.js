@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线自动看视频
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      0.2
+// @version      1.0
 // @description  优课在线自动在线看视频工具
 // @author       ImDong
 // @match        *://*.uooconline.com/home
