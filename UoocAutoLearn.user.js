@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线自动看视频
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      0.1
+// @version      0.2
 // @description  优课在线自动在线看视频工具
 // @author       ImDong
 // @match        *://*.uooconline.com/home
@@ -10,34 +10,43 @@
 
 (function (window) {
 
-    // 定时检测元素出现
-    (function (selector, callback) {
-        if ($(selector).length > 0) {
-            callback(selector);
-        } else {
-            setTimeout(() => {
-                arguments.callee(selector, callback);
-            }, 100);
-        }
-    })('.msg1', function (selector) {
-        $(selector).bind('DOMNodeInserted', function (e) {
-            // 追加按钮
-            $('.course-item .course-right-bottom-btn').not('.uooc-auto-learn-btn').each(function (key, item) {
+    // 创建对象
+    var UoocAutoLearn = window.UoocAutoLearn || {
+        apiUrl: '/home/learn/'
+    };
+
+    // 遍历添加按钮
+    UoocAutoLearn.loop1AddBtn = function () {
+        $('.course-item .course-right-bottom-btn').not('.uooc-auto-learn-btn').each(function (key, item) {
+            // 设置未修改过的
+            if (typeof item.dataset.btnAdd == "undefined") {
+                // 获取标记
                 var cid = item.pathname.split('/').pop(),
-                    btnHtml = '<a class="course-right-bottom-btn uooc-auto-learn-btn" style="font-size: 12px; width: 60px;" data-cid="' + cid + '">在线挂机</a>';
-                if (typeof item.dataset.btnAdd == "undefined" && cid != '%7B%7Bitem.id%7D%7D') {
-                    item.dataset.btnAdd = 'isAdd'; // 追加元素
+                    btnHtml = '<a class="course-right-bottom-btn uooc-auto-learn-btn" style="font-size: 12px; width: 58px; margin-left: 4px;" data-cid="' + cid + '">在线挂机</a>';
+
+                if (cid != '%7B%7Bitem.id%7D%7D') {
+                    // 设置为已修改
+                    item.dataset.btnAdd = 'isAdd';
+
                     // 修改样式
                     item.style.fontSize = '12px';
-                    item.style.width = '60px';
+                    item.style.width = '58px';
+
                     // 追加元素
                     $(item).before(btnHtml);
                 }
-            });
+            }
         });
+    }
 
+    // 死循环每隔100检测一次按钮
+    setInterval(() => {
+        UoocAutoLearn.loop1AddBtn();
+    }, 100);
+
+    $(function () {
         // 绑定按钮事件
-        $('.msg1').on('click', '.uooc-auto-learn-btn', function () {
+        $(document).on('click', '.uooc-auto-learn-btn', function () {
             UoocAutoLearn.cid = this.dataset.cid;
 
             console.log('开始任务', UoocAutoLearn.cid);
@@ -45,12 +54,7 @@
             // 获取课程进度
             UoocAutoLearn.getCourseLearn();
         });
-    });
-
-    // 创建对象
-    var UoocAutoLearn = window.UoocAutoLearn || {
-        apiUrl: '/home/learn/'
-    };
+    })
 
     // 获取课程列表
     UoocAutoLearn.getCatalogList = function () {
@@ -113,6 +117,12 @@
                 UoocAutoLearn.catalog_id = response.data.catalog_id;
                 UoocAutoLearn.subsection_id = response.data.subsection_id;
                 UoocAutoLearn.parent_name = response.data.parent_name;
+
+                // 如果没有看过
+                if (UoocAutoLearn.chapter_id <= 0) {
+                    UoocAutoLearn.getCatalogList();
+                    return;
+                }
 
                 console.log(
                     '课程信息', UoocAutoLearn.parent_name,
