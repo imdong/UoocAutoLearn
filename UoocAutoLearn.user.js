@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线自动看视频
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      0.1
+// @version      0.2
 // @description  优课在线自动在线看视频工具
 // @author       ImDong
 // @match        *://*.uooconline.com/home
@@ -38,9 +38,11 @@
 
         // 绑定按钮事件
         $('.msg1').on('click', '.uooc-auto-learn-btn', function () {
-            console.log('开始任务');
             UoocAutoLearn.cid = this.dataset.cid;
 
+            console.log('开始任务', UoocAutoLearn.cid);
+
+            // 获取课程进度
             UoocAutoLearn.getCourseLearn();
         })
     });
@@ -66,14 +68,17 @@
 
     //  遍历课程
     UoocAutoLearn.loopCatalog = function (data) {
+        var isFinished = true;
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
             if (item.finished == 0) {
+                isFinished = false;
                 if (typeof item.children != 'undefined') {
                     UoocAutoLearn.loopCatalog(item.children);
                 } else {
                     // 播放这个课程
                     console.log('新的课程', item.number, item.name);
+
                     UoocAutoLearn.catalog_id = item.id;
                     UoocAutoLearn.chapter_id = item.pid;
                     UoocAutoLearn.video_pos = 0;
@@ -83,6 +88,9 @@
                 }
                 break;
             }
+        }
+        if (isFinished) {
+            console.log('恭喜，本课已全看完。');
         }
     };
 
@@ -101,10 +109,17 @@
                 }
                 UoocAutoLearn.chapter_id = response.data.chapter_id;
                 UoocAutoLearn.section_id = response.data.section_id;
-                UoocAutoLearn.catalog_id = response.data.catalog_id;
                 UoocAutoLearn.resource_id = response.data.resource_id;
+                UoocAutoLearn.catalog_id = response.data.catalog_id;
                 UoocAutoLearn.subsection_id = response.data.subsection_id;
                 UoocAutoLearn.parent_name = response.data.parent_name;
+
+                console.log(
+                    '课程信息', UoocAutoLearn.parent_name,
+                    '章节', UoocAutoLearn.chapter_id,
+                    '部分', UoocAutoLearn.section_id,
+                    '资源', UoocAutoLearn.resource_id,
+                );
 
                 // 获取课程观看时间
                 UoocAutoLearn.getUnitLearn();
@@ -125,6 +140,7 @@
             },
             success: function (response) {
                 // 遍历每一个视频
+                var isFinished = true;
                 for (let index = 0; index < response.data.length; index++) {
                     const item = response.data[index];
                     if (item.finished == 0) {
@@ -132,30 +148,38 @@
                         UoocAutoLearn.videoSource = item.video_play_list[0].source;
                         UoocAutoLearn.title = item.title;
                         UoocAutoLearn.resource_id = item.id;
+                        isFinished = false;
+
                         console.log('当前任务', UoocAutoLearn.parent_name, UoocAutoLearn.title);
+
                         // 获取视频时长
-                        UoocAutoLearn.getVideoLength(UoocAutoLearn);
+                        UoocAutoLearn.getVideoLength();
 
                         break;
                     }
+                }
+                // 如果都看完了
+                if (isFinished) {
+                    // 获取下一节课
+                    UoocAutoLearn.getCatalogList();
                 }
             }
         });
     };
 
     // 获取视频长度
-    UoocAutoLearn.getVideoLength = function (that) {
+    UoocAutoLearn.getVideoLength = function () {
         var video = document.createElement('video');
         // 加载完成后调用
         video.onloadeddata = function () {
-            that.video_length = this.duration;
+            UoocAutoLearn.video_length = this.duration;
 
             console.log('总时长', UoocAutoLearn.video_length, '秒, 已看至', UoocAutoLearn.video_pos, '秒');
 
             // 开始刷新时间
-            that.markVideoLearn();
+            UoocAutoLearn.markVideoLearn();
         };
-        video.src = that.videoSource;
+        video.src = UoocAutoLearn.videoSource;
         return;
     };
 
