@@ -5,6 +5,8 @@
 // @description  优课在线自动在线看视频工具
 // @author       ImDong
 // @match        *://*.uooconline.com/home
+// @match        *://*.uooconline.com/exam/*
+// @match        *://www1.baidu.com/s?uooc=1&*
 // @grant        none
 // ==/UserScript==
 
@@ -16,7 +18,7 @@
     };
 
     // 遍历添加按钮
-    UoocAutoLearn.loop1AddBtn = function () {
+    UoocAutoLearn.homeAddBtn = function () {
         $('.course-item .course-right-bottom-btn').not('.uooc-auto-learn-btn').each(function (key, item) {
             // 设置未修改过的
             if (typeof item.dataset.btnAdd == "undefined") {
@@ -37,12 +39,7 @@
                 }
             }
         });
-    }
-
-    // 死循环每隔100检测一次按钮
-    setInterval(() => {
-        UoocAutoLearn.loop1AddBtn();
-    }, 100);
+    };
 
     $(function () {
         // 绑定按钮事件
@@ -54,7 +51,7 @@
             // 获取课程进度
             UoocAutoLearn.getCourseLearn();
         });
-    })
+    });
 
     // 获取课程列表
     UoocAutoLearn.getCatalogList = function () {
@@ -228,5 +225,83 @@
         });
     };
 
+    // 添加百度搜索按钮
+    UoocAutoLearn.examAddBaidu = function () {
+        // 修改页面样式
+        $('body>div.uwidth').css({ marginLeft: '0px' });
+
+        $('.ti-q-c').wrap('<a href="javascript:;" class="question-item"></a>');
+        $('.question-item').click(function (e) {
+            layer.open({
+                type: 2,
+                title: false,
+                shadeClose: true, // 遮罩关闭
+                shade: 0.5, // 遮罩透明度
+                closeBtn: 0, //不显示关闭按钮
+                offset: 'r', // 弹出层位置
+                area: ['730px', '100%'], // 大小
+                anim: 3, // 动画 向左滑动
+                content: 'https://www1.baidu.com/s?uooc=1&wd=' + this.innerText
+            });
+        });
+    };
+
+    // 百度搜索页面修改
+    UoocAutoLearn.baiduLink = function () {
+        $('#content_left .result h3.t a').click(function (e) {
+            window.parent.postMessage(this.href, document.referrer);
+            return false;
+        });
+    };
+
+    // 监听消息回调
+    window.addEventListener('message', function (e) {
+        // 页面宽度
+        var w = document.body.clientWidth - 550;
+        layer.open({
+            type: 2,
+            title: false,
+            shadeClose: true, // 遮罩关闭
+            shade: 0.5, // 遮罩透明度
+            closeBtn: 0, //不显示关闭按钮
+            offset: 'r', // 弹出层位置
+            area: [w + 'px', '100%'], // 大小
+            anim: 3, // 动画 向左滑动
+            content: e.data
+        });
+    }, false);
+
+    // 遍历添加按钮
+    UoocAutoLearn.loopAddBtn = function () {
+        // 判断页面地址
+        if (/^\/exam\//.test(location.pathname)) {
+            console.log("exam");
+            // 判断题目是否出来
+            if ($('.ti-q-c').length > 0) {
+                UoocAutoLearn.examAddBaidu();
+            } else {
+                // 等1秒再检测
+                setTimeout(() => {
+                    UoocAutoLearn.loopAddBtn();
+                }, 100);
+            }
+        } else if (/^\/home/.test(location.pathname)) {
+            // 尝试添加按钮
+            UoocAutoLearn.homeAddBtn();
+
+            // 死循环每隔500检测一次按钮
+            UoocAutoLearn.addBtnIntervalId = setInterval(() => {
+                UoocAutoLearn.loopAddBtn();
+            }, 100);
+        } else if (/^\/s/.test(location.pathname) && /^\?uooc=1&/.test(location.search) && /^https?:\/\/.*?\.uooconline\.com\/exam\//.test(document.referrer)) {
+            console.log('载入百度');
+            UoocAutoLearn.baiduLink();
+        }
+    };
+
+    // 注册到全局
     window.UoocAutoLearn = UoocAutoLearn;
+
+    // 添加按钮
+    UoocAutoLearn.loopAddBtn();
 })(window);
