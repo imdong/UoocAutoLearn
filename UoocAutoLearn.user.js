@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线自动看视频
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      1.1
+// @version      1.1.180614
 // @description  优课在线自动在线看视频工具
 // @author       ImDong
 // @match        *://*.uooconline.com/home
@@ -19,6 +19,7 @@
 
     // 遍历添加按钮
     UoocAutoLearn.homeAddBtn = function () {
+        console.log("homeAddBtn");
         $('.course-item .course-right-bottom-btn').not('.uooc-auto-learn-btn').each(function (key, item) {
             // 设置未修改过的
             if (typeof item.dataset.btnAdd == "undefined") {
@@ -47,6 +48,9 @@
             UoocAutoLearn.cid = this.dataset.cid;
 
             console.log('开始任务', UoocAutoLearn.cid);
+
+            // 结束定时添加按钮的定时器
+            clearInterval(UoocAutoLearn.addBtnIntervalId);
 
             // 获取课程进度
             UoocAutoLearn.getCourseLearn();
@@ -273,6 +277,8 @@
 
     // 遍历添加按钮
     UoocAutoLearn.loopAddBtn = function () {
+        console.log('loopAddBtn');
+
         // 判断页面地址
         if (/^\/exam\//.test(location.pathname)) {
             console.log("exam");
@@ -286,13 +292,15 @@
                 }, 100);
             }
         } else if (/^\/home/.test(location.pathname)) {
+            console.log("home");
+
             // 尝试添加按钮
             UoocAutoLearn.homeAddBtn();
 
             // 死循环每隔500检测一次按钮
             UoocAutoLearn.addBtnIntervalId = setInterval(() => {
-                UoocAutoLearn.loopAddBtn();
-            }, 100);
+                UoocAutoLearn.homeAddBtn();
+            }, 500);
         } else if (/^\/s/.test(location.pathname) && /^\?uooc=1&/.test(location.search) && /^https?:\/\/.*?\.uooconline\.com\/exam\//.test(document.referrer)) {
             console.log('载入百度');
             UoocAutoLearn.baiduLink();
