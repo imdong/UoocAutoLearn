@@ -243,13 +243,31 @@
                 cmd: 'save_exam_answer',
                 cid: cid,
                 tid: tid,
-                data: JSON.parse(data)
+                data: JSON.stringify(data)
             },
             success: function (response) {
                 console.log(response);
             }
         });
     }
+
+    // 从服务器获取答案
+    UoocAutoLearn.getExamAnswer = function (cid, tid) {
+        $.ajax({
+            type: "GET",
+            url: UoocAutoLearn.apiUrl,
+            data: {
+                cmd: 'get_exam_answer',
+                cid: cid,
+                tid: tid
+            },
+            success: function (response) {
+                console.log(response);
+            }
+        });
+    }
+
+
 
     // 遍历添加按钮
     UoocAutoLearn.homeAddBtn = function () {
