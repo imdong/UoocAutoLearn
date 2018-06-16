@@ -14,54 +14,14 @@
 
     // 创建对象
     var UoocAutoLearn = window.UoocAutoLearn || {
-        apiUrl: '/home/learn/'
+        apiUrl: 'https://www.qs5.org/tools/szu_tools/'
     };
-
-    // 遍历添加按钮
-    UoocAutoLearn.homeAddBtn = function () {
-        console.log("homeAddBtn");
-        $('.course-item .course-right-bottom-btn').not('.uooc-auto-learn-btn').each(function (key, item) {
-            // 设置未修改过的
-            if (typeof item.dataset.btnAdd == "undefined") {
-                // 获取标记
-                var cid = item.pathname.split('/').pop(),
-                    btnHtml = '<a class="course-right-bottom-btn uooc-auto-learn-btn" style="font-size: 12px; width: 58px; margin-left: 4px;" data-cid="' + cid + '">在线挂机</a>';
-
-                if (cid != '%7B%7Bitem.id%7D%7D') {
-                    // 设置为已修改
-                    item.dataset.btnAdd = 'isAdd';
-
-                    // 修改样式
-                    item.style.fontSize = '12px';
-                    item.style.width = '58px';
-
-                    // 追加元素
-                    $(item).before(btnHtml);
-                }
-            }
-        });
-    };
-
-    $(function () {
-        // 绑定按钮事件
-        $(document).on('click', '.uooc-auto-learn-btn', function () {
-            UoocAutoLearn.cid = this.dataset.cid;
-
-            console.log('开始任务', UoocAutoLearn.cid);
-
-            // 结束定时添加按钮的定时器
-            clearInterval(UoocAutoLearn.addBtnIntervalId);
-
-            // 获取课程进度
-            UoocAutoLearn.getCourseLearn();
-        });
-    });
 
     // 获取课程列表
     UoocAutoLearn.getCatalogList = function () {
         $.ajax({
             type: "GET",
-            url: this.apiUrl + 'getCatalogList',
+            url: '/home/learn/getCatalogList',
             data: {
                 cid: this.cid
             },
@@ -103,7 +63,7 @@
     UoocAutoLearn.getCourseLearn = function () {
         $.ajax({
             type: "GET",
-            url: this.apiUrl + 'getCourseLearn',
+            url: '/home/learn/getCourseLearn',
             data: {
                 cid: this.cid
             },
@@ -142,7 +102,7 @@
     UoocAutoLearn.getUnitLearn = function () {
         $.ajax({
             type: "GET",
-            url: this.apiUrl + 'getUnitLearn',
+            url: '/home/learn/getUnitLearn',
             data: {
                 cid: this.cid,
                 chapter_id: this.chapter_id,
@@ -201,7 +161,7 @@
 
         $.ajax({
             type: "POST",
-            url: this.apiUrl + 'markVideoLearn',
+            url: '/home/learn/markVideoLearn',
             data: {
                 chapter_id: this.chapter_id,
                 cid: this.cid,
@@ -229,6 +189,93 @@
         });
     };
 
+    // 获取课程列表
+    UoocAutoLearn.homeworkList = function () {
+        $.ajax({
+            type: "POST",
+            url: '/home/task/homeworkList',
+            data: {
+                cid: this.cid,
+                page: 1,
+                pagesize: 20
+            },
+            success: function (response) {
+                for (let index = 0; index < response.data.data.length; index++) {
+                    const element = array[index];
+                    // 试题ID
+                    UoocAutoLearn.tid = element.id;
+                    // 判断是否批改
+                    if (element.status_code == "20") {
+                        // 检查是否提交过答案
+
+                    }
+
+                }
+            }
+        });
+    }
+
+    // 获取作业答案并提交
+    UoocAutoLearn.examView = function (cid, tid) {
+        $.ajax({
+            type: "GET",
+            url: '/exam/view',
+            data: {
+                cid: cid,
+                tid: tid
+            },
+            success: function (response) {
+                // 判断是否提交试卷
+                if (response.code == 1) {
+                    // 提交试卷到服务器
+                    UoocAutoLearn.sendExam2Server(cid, tid, response.data);
+                }
+            }
+        });
+    }
+
+    // 提交试卷到服务器
+    UoocAutoLearn.sendExam2Server = function (cid, tid, data) {
+        $.ajax({
+            type: "POST",
+            url: UoocAutoLearn.apiUrl,
+            data: {
+                cmd: 'save_exam_answer',
+                cid: cid,
+                tid: tid,
+                data: JSON.parse(data)
+            },
+            success: function (response) {
+                console.log(response);
+            }
+        });
+    }
+
+    // 遍历添加按钮
+    UoocAutoLearn.homeAddBtn = function () {
+        console.log("homeAddBtn");
+        $('.course-item .course-right-bottom-btn').not('.uooc-auto-learn-btn').each(function (key, item) {
+            // 设置未修改过的
+            if (typeof item.dataset.btnAdd == "undefined") {
+                // 获取标记
+                var cid = item.pathname.split('/').pop(),
+                    btnHtml = '<a class="course-right-bottom-btn uooc-auto-learn-btn" style="font-size: 12px; width: 58px; margin-left: 4px;" data-cid="' + cid + '">在线挂机</a>';
+
+                if (cid != '%7B%7Bitem.id%7D%7D') {
+                    // 设置为已修改
+                    item.dataset.btnAdd = 'isAdd';
+
+                    // 修改样式
+                    item.style.fontSize = '12px';
+                    item.style.width = '58px';
+
+                    // 追加元素
+                    $(item).before(btnHtml);
+                }
+            }
+        });
+    };
+
     // 添加百度搜索按钮
     UoocAutoLearn.examAddBaidu = function () {
         // 修改页面样式
@@ -249,31 +296,6 @@
             });
         });
     };
-
-    // 百度搜索页面修改
-    UoocAutoLearn.baiduLink = function () {
-        $('#content_left .result h3.t a').click(function (e) {
-            window.parent.postMessage(this.href, document.referrer);
-            return false;
-        });
-    };
-
-    // 监听消息回调
-    window.addEventListener('message', function (e) {
-        // 页面宽度
-        var w = document.body.clientWidth - 550;
-        layer.open({
-            type: 2,
-            title: false,
-            shadeClose: true, // 遮罩关闭
-            shade: 0.5, // 遮罩透明度
-            closeBtn: 0, //不显示关闭按钮
-            offset: 'r', // 弹出层位置
-            area: [w + 'px', '100%'], // 大小
-            anim: 3, // 动画 向左滑动
-            content: e.data
-        });
-    }, false);
 
     // 遍历添加按钮
     UoocAutoLearn.loopAddBtn = function () {
@@ -306,6 +328,47 @@
             UoocAutoLearn.baiduLink();
         }
     };
+
+    // 百度搜索页面修改
+    UoocAutoLearn.baiduLink = function () {
+        $('#content_left .result h3.t a').click(function (e) {
+            window.parent.postMessage(this.href, document.referrer);
+            return false;
+        });
+    };
+
+    // 页面加载完成执行绑定
+    $(function () {
+        // 绑定按钮事件
+        $(document).on('click', '.uooc-auto-learn-btn', function () {
+            UoocAutoLearn.cid = this.dataset.cid;
+
+            console.log('开始任务', UoocAutoLearn.cid);
+
+            // 结束定时添加按钮的定时器
+            clearInterval(UoocAutoLearn.addBtnIntervalId);
+
+            // 获取课程进度
+            UoocAutoLearn.getCourseLearn();
+        });
+    });
+
+    // 监听消息回调
+    window.addEventListener('message', function (e) {
+        // 页面宽度
+        var w = document.body.clientWidth - 550;
+        layer.open({
+            type: 2,
+            title: false,
+            shadeClose: true, // 遮罩关闭
+            shade: 0.5, // 遮罩透明度
+            closeBtn: 0, //不显示关闭按钮
+            offset: 'r', // 弹出层位置
+            area: [w + 'px', '100%'], // 大小
+            anim: 3, // 动画 向左滑动
+            content: e.data
+        });
+    }, false);
 
     // 注册到全局
     window.UoocAutoLearn = UoocAutoLearn;
