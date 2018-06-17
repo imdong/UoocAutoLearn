@@ -1,16 +1,15 @@
 // ==UserScript==
-// @name         优课在线自动看视频
+// @name         优课在线辅助脚本
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      1.1.180614
-// @description  优课在线自动在线看视频工具
+// @version      1.1.180617a
+// @description  实现自动挂机看视频，作业自动做题/共享答案功能
 // @author       ImDong
-// @match        *://*.uooconline.com/home
-// @match        *://*.uooconline.com/exam/*
+// @match        *://*.uooconline.com/*
 // @match        *://www1.baidu.com/s?uooc=1&*
 // @grant        none
 // ==/UserScript==
 
-(function (window) {
+(function (window, $) {
 
     // 创建对象
     var UoocAutoLearn = window.UoocAutoLearn || {
@@ -191,8 +190,10 @@
 
     // 获取课程列表
     UoocAutoLearn.homeworkList = function () {
+        console.log('homeworkList');
+
         $.ajax({
-            type: "POST",
+            type: "GET",
             url: '/home/task/homeworkList',
             data: {
                 cid: this.cid,
@@ -201,15 +202,12 @@
             },
             success: function (response) {
                 for (let index = 0; index < response.data.data.length; index++) {
-                    const element = array[index];
-                    // 试题ID
-                    UoocAutoLearn.tid = element.id;
+                    const element = response.data.data[index];
                     // 判断是否批改
                     if (element.status_code == "20") {
-                        // 检查是否提交过答案
-
+                        // 提交答案到服务器
+                        UoocAutoLearn.examView(UoocAutoLearn.cid, element.id)
                     }
-
                 }
             }
         });
@@ -217,6 +215,7 @@
 
     // 获取作业答案并提交
     UoocAutoLearn.examView = function (cid, tid) {
+        console.log('examView', cid, tid);
         $.ajax({
             type: "GET",
             url: '/exam/view',
@@ -236,6 +235,7 @@
 
     // 提交试卷到服务器
     UoocAutoLearn.sendExam2Server = function (cid, tid, data) {
+        console.log('sendExam2Server', cid, tid);
         $.ajax({
             type: "POST",
             url: UoocAutoLearn.apiUrl,
@@ -246,28 +246,104 @@
                 data: JSON.stringify(data)
             },
             success: function (response) {
-                console.log(response);
+                console.log('sendExam2Server', cid, tid, response);
             }
         });
     }
 
     // 从服务器获取答案
-    UoocAutoLearn.getExamAnswer = function (cid, tid) {
+    UoocAutoLearn.getExamAnswer = function () {
+        console.log('getExamAnswer', this.tid);
         $.ajax({
             type: "GET",
             url: UoocAutoLearn.apiUrl,
             data: {
                 cmd: 'get_exam_answer',
-                cid: cid,
-                tid: tid
+                tid: this.tid
             },
             success: function (response) {
                 console.log(response);
+                if (response.code == 1) {
+                    window._response = response;
+                    UoocAutoLearn.answerData = response.data;
+                    UoocAutoLearn.loopSetAnchor();
+                }
             }
         });
     }
 
+    // 依次遍历题目修改答案
+    UoocAutoLearn.loopSetAnchor = function () {
+        console.log("loopSetAnchor");
+        for (let i = 0; i < UoocAutoLearn.answerData.length; i++) {
+            const item = UoocAutoLearn.answerData[i];
 
+            // 获取题目对象
+            var anchor = $('#anchor' + item.id).parent('.queContainer');
+
+            window._item = item;
+            window._anchor = anchor;
+
+            // 获取题目内容
+            var anchor_ti = anchor.find('.ti-q-c').text(),
+                answer_ti = $("<div />").html(item.question).text();
+
+            // 题目相同再遍历答案
+            if (anchor_ti == answer_ti) {
+                // 设置题目绿色背景
+                // anchor.find('.ti-q-c').css({ backgroundColor: '#99FF99' });
+
+                // 获取答案
+                var ti_alist = anchor.find('.ti-alist label');
+                for (let k = 0; k < ti_alist.length; k++) {
+                    const a_item = ti_alist[k];
+                    // 获取作业答案并提交
+                    var ti_k = $(a_item).find('input').val(),
+                        ti_v = $(a_item).find('.ti-a-c').text(),
+                        an_v = $('<div />').html(item.options[ti_k]).text();
+
+                    // 对比答案是否一致 一致则勾选
+                    if (ti_v == an_v) {
+                        // 设置题目绿色
+                        // $(a_item).find('.ti-a-c').css({ backgroundColor: '#99FF99' })
+
+                        // 题目是否是正确答案
+                        if (item.answer.indexOf(ti_k) >= 0) {
+                            $(a_item).find('input').click();
+                        }
+                    } else {
+                        // 答案不一致 标红
+                        $(a_item).find('.ti-a-c').css({ backgroundColor: 'burlywood' });
+                        // 显示数据库原题
+                        $(a_item).find('.ti-a-c').append(an_v);
+                    }
+                }
+            }
+            // 题目不一致 设置红色
+            else {
+                // var ti_a_list = $('<ul>');
+                // for (let i = 0; i < item.answer.length; i++) {
+                //     const element = item.answer[i];
+                //     ti_a_list.before('<li>' +  + '</li>')
+                // }
+                // var ti_q = $('<div>').text("记录题目: ").css({ backgroundColor: 'burlywood' }),
+                //     ti_a = $('<span>')
+
+                // ti_q.append("记录正确答案: AA");
+                // anchor.find('.ti-q-c').append(ti_q);
+                anchor.find('.ti-q-c').css({ backgroundColor: 'burlywood' });
+            }
+        }
+    }
+
+    // 尝试修改页面题目
+    UoocAutoLearn.setExamAnswer = function () {
+        this.tid = location.pathname.match(/^\/exam\/([0-9]+)/)[1];
+        console.log('setExamAnswer', this.tid);
+
+        // 向服务器查询是否有答案
+        UoocAutoLearn.getExamAnswer();
+    }
 
     // 遍历添加按钮
     UoocAutoLearn.homeAddBtn = function () {
@@ -315,25 +391,38 @@
         });
     };
 
-    // 遍历添加按钮
-    UoocAutoLearn.loopAddBtn = function () {
-        console.log('loopAddBtn');
+    // 作业列表页面 尝试获取已经做过的题目然后提交
+    UoocAutoLearn.examHomeWork = function () {
+        // 获取 cid
+        this.cid = location.pathname.match(/^\/home\/course\/([0-9]+)/)[1];
+        console.log('examHomeWork', this.cid);
 
-        // 判断页面地址
-        if (/^\/exam\//.test(location.pathname)) {
+        // 尝试获取答案并提交到服务器
+        UoocAutoLearn.homeworkList();
+    }
+
+    // 区分页面地址进行修改 只对刷新有效
+    UoocAutoLearn.changePage = function () {
+        console.log('changePage');
+
+        // /home/course/1083723112#/homework 作业列表页面 location.hash == "#/homework" &&
+        if (/^\/home\/course\/[0-9]+/.test(location.pathname)) {
+            console.log('home/course');
+            UoocAutoLearn.examHomeWork();
+            return;
+        }
+        // /exam/955957832 做题页面
+        else if (/^\/exam\/[0-9]+/.test(location.pathname)) {
             console.log("exam");
+
             // 判断题目是否出来
             if ($('.ti-q-c').length > 0) {
-                UoocAutoLearn.examAddBaidu();
-            } else {
-                // 等1秒再检测
-                setTimeout(() => {
-                    UoocAutoLearn.loopAddBtn();
-                }, 100);
+                UoocAutoLearn.setExamAnswer();
+                return;
             }
-        } else if (/^\/home/.test(location.pathname)) {
-            console.log("home");
-
+        }
+        // 已选课程列表
+        else if (/^\/home/.test(location.pathname)) {
             // 尝试添加按钮
             UoocAutoLearn.homeAddBtn();
 
@@ -341,10 +430,19 @@
             UoocAutoLearn.addBtnIntervalId = setInterval(() => {
                 UoocAutoLearn.homeAddBtn();
             }, 500);
-        } else if (/^\/s/.test(location.pathname) && /^\?uooc=1&/.test(location.search) && /^https?:\/\/.*?\.uooconline\.com\/exam\//.test(document.referrer)) {
+
+            return;
+        }
+        // 百度搜索页面 接管链接
+        else if (/^\/s/.test(location.pathname) && /^\?uooc=1&/.test(location.search) && /^https?:\/\/.*?\.uooconline\.com\/exam\//.test(document.referrer)) {
             console.log('载入百度');
             UoocAutoLearn.baiduLink();
+            return;
         }
+        // 到这里就默认定时器处理
+        setTimeout(() => {
+            UoocAutoLearn.changePage();
+        }, 500);
     };
 
     // 百度搜索页面修改
@@ -354,6 +452,23 @@
             return false;
         });
     };
+
+    // 事件回调 页面消息
+    UoocAutoLearn.eventMessage = function (e) {
+        // 页面宽度
+        var w = document.body.clientWidth - 550;
+        layer.open({
+            type: 2,
+            title: false,
+            shadeClose: true, // 遮罩关闭
+            shade: 0.5, // 遮罩透明度
+            closeBtn: 0, //不显示关闭按钮
+            offset: 'r', // 弹出层位置
+            area: [w + 'px', '100%'], // 大小
+            anim: 3, // 动画 向左滑动
+            content: e.data
+        });
+    }
 
     // 页面加载完成执行绑定
     $(function () {
@@ -369,28 +484,14 @@
             // 获取课程进度
             UoocAutoLearn.getCourseLearn();
         });
-    });
 
-    // 监听消息回调
-    window.addEventListener('message', function (e) {
-        // 页面宽度
-        var w = document.body.clientWidth - 550;
-        layer.open({
-            type: 2,
-            title: false,
-            shadeClose: true, // 遮罩关闭
-            shade: 0.5, // 遮罩透明度
-            closeBtn: 0, //不显示关闭按钮
-            offset: 'r', // 弹出层位置
-            area: [w + 'px', '100%'], // 大小
-            anim: 3, // 动画 向左滑动
-            content: e.data
-        });
-    }, false);
+        // 监听消息回调 暂时不再需要
+        window.addEventListener('message', UoocAutoLearn.eventMessage, false);
+    });
 
     // 注册到全局
     window.UoocAutoLearn = UoocAutoLearn;
 
-    // 添加按钮
-    UoocAutoLearn.loopAddBtn();
-})(window);
+    // 修改页面
+    UoocAutoLearn.changePage();
+})(window, window.jQuery);
