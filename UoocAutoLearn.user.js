@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线辅助脚本
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      1.1.180617a
+// @version      1.2.180930a
 // @description  实现自动挂机看视频，作业自动做题/共享答案功能
 // @author       ImDong
 // @match        *://*.uooconline.com/*
@@ -139,24 +139,24 @@
 
     // 获取视频长度
     UoocAutoLearn.getVideoLength = function () {
-        var video = document.createElement('video');
+        // var video = document.createElement('video');
         // 加载完成后调用
-        video.onloadeddata = function () {
-            UoocAutoLearn.video_length = this.duration;
+        // video.onloadeddata = function () {
+        UoocAutoLearn.video_length = 0;
 
-            console.log('总时长', UoocAutoLearn.video_length, '秒, 已看至', UoocAutoLearn.video_pos, '秒');
+        // console.log('总时长', UoocAutoLearn.video_length, '秒, 已看至', UoocAutoLearn.video_pos, '秒');
 
-            // 开始刷新时间
-            UoocAutoLearn.markVideoLearn();
-        };
-        video.src = UoocAutoLearn.videoSource;
+        // 开始刷新时间
+        UoocAutoLearn.markVideoLearn();
+        // };
+        // video.src = UoocAutoLearn.videoSource;
         return;
     };
 
     // 刷新时间
     UoocAutoLearn.markVideoLearn = function () {
         this.video_pos = this.video_pos + 10;
-        if (this.video_pos > this.video_length) this.video_pos = this.video_length;
+        if (this.video_pos > this.video_length && this.video_length > 0) this.video_pos = this.video_length;
 
         $.ajax({
             type: "POST",
@@ -170,12 +170,12 @@
                 section_id: this.section_id,
                 source: 1,
                 subsection_id: this.subsection_id,
-                video_length: this.video_length,
+                video_length: this.video_length == 0 ? 100 : this.video_length,
                 video_pos: this.video_pos
             },
             success: function (response) {
-                console.log('已看至', UoocAutoLearn.video_pos, '秒, 总', UoocAutoLearn.video_length, '秒');
-                if (response.data.finished == 1 || UoocAutoLearn.video_pos >= UoocAutoLearn.video_length) {
+                console.log('已看至', UoocAutoLearn.video_pos, '秒, 总', UoocAutoLearn.video_length == 0 ? '未知' : UoocAutoLearn.video_length, '秒');
+                if (response.data.finished == 1 || (UoocAutoLearn.video_length > 0 && UoocAutoLearn.video_pos >= UoocAutoLearn.video_length)) {
                     console.log('本课已经结束');
                     // 获取下一节课
                     UoocAutoLearn.getCatalogList();
