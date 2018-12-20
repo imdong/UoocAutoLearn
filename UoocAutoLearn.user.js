@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线辅助脚本
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      1.2.180930a
+// @version      1.2.181220a
 // @description  实现自动挂机看视频，作业自动做题/共享答案功能
 // @author       ImDong
 // @match        *://*.uooconline.com/*
@@ -257,6 +257,7 @@
         $.ajax({
             type: "GET",
             url: UoocAutoLearn.apiUrl,
+            dataType: "JSONP",
             data: {
                 cmd: 'get_exam_answer',
                 tid: this.tid
@@ -418,6 +419,8 @@
             // 判断题目是否出来
             if ($('.ti-q-c').length > 0) {
                 UoocAutoLearn.setExamAnswer();
+                // 添加搜索按钮
+                UoocAutoLearn.examAddBaidu();
                 return;
             }
         }
