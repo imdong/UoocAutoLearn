@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优课在线辅助脚本
 // @namespace    http://www.qs5.org/?UoocAutoLearn
-// @version      1.2.181220a
+// @version      1.2.181225a
 // @description  实现自动挂机看视频，作业自动做题/共享答案功能
 // @author       ImDong
 // @match        *://*.uooconline.com/*
@@ -13,7 +13,7 @@
 
     // 创建对象
     var UoocAutoLearn = window.UoocAutoLearn || {
-        apiUrl: 'https://www.qs5.org/tools/szu_tools/'
+        apiUrl: 'https://www.qs5.org/tools/szu_tools/index.php'
     };
 
     // 获取课程列表
@@ -376,8 +376,22 @@
         // 修改页面样式
         $('body>div.uwidth').css({ marginLeft: '0px' });
 
-        $('.ti-q-c').wrap('<a href="javascript:;" class="question-item"></a>');
+        $('.ti-q-c').before('<a href="javascript:;" class="question-item" data-type="baidu">百度搜索</a> | <a href="javascript:;" class="question-item" data-type="qs5">搜索题库</a>');
         $('.question-item').click(function (e) {
+            let query = $(this).nextAll('.ti-q-c').text(),
+                url = 'https://www1.baidu.com/s?uooc=1&wd=' + query;
+            switch (this.dataset.type) {
+                case "baidu":
+                    url = 'https://www1.baidu.com/s?uooc=1&wd=' + query;
+                    break;
+                case "qs5":
+                    url = 'https://www.qs5.org/tools/szu_tools/search.html#' + query;
+                    break;
+                default:
+                    url = 'https://www1.baidu.com/s?uooc=1&wd=' + query;
+                    break;
+            }
+
             layer.open({
                 type: 2,
                 title: false,
@@ -387,7 +401,7 @@
                 offset: 'r', // 弹出层位置
                 area: ['730px', '100%'], // 大小
                 anim: 3, // 动画 向左滑动
-                content: 'https://www1.baidu.com/s?uooc=1&wd=' + this.innerText
+                content: url
             });
         });
     };
